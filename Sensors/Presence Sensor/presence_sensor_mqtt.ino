@@ -6,10 +6,6 @@
  | |\  || || |___ ___) | . \ | || |___ / /_ 
  |_| \_|___|_____|____/|_|\_\___|_____/____|
                                             
-
-  
-  Thanks much to @corbanmailloux for providing a great framework for implementing flash/fade with HomeAssistant https://github.com/corbanmailloux/esp-mqtt-rgb-led
-  To use this code you will need the following dependancies: 
   
   - Support for the ESP8266 boards. 
         - You can add it to the board manager by going to File -> Preference and pasting http://arduino.esp8266.com/stable/package_esp8266com_index.json into the Additional Board Managers URL field.
@@ -17,12 +13,11 @@
   
   - You will also need to download the follow libraries by going to Sketch -> Include Libraries -> Manage Libraries
       - PubSubClient
-      - ArduinoJSON
-    
+      - ArduinoJSON  
 */
 
 
-
+#include "config.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ESP8266mDNS.h>
@@ -30,28 +25,6 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 
-
-
-/************ WIFI and MQTT INFORMATION (CHANGE THESE FOR YOUR SETUP) ******************/
-#define wifi_ssid "PidgeonsNest" //type your WIFI information inside the quotes
-#define wifi_password "3b5794e3e9"
-#define mqtt_server "192.168.0.8"
-#define mqtt_user "mqttadmin" 
-#define mqtt_password "dfgi0emd2"
-#define mqtt_port 1883
-
-
-
-/************* MQTT TOPICS (change these topics as you wish)  **************************/
-#define light_state_topic "pidgeons_nest/radar1"
-#define light_set_topic "pidgeons_nest/radar1"
-
-
-
-
-/**************************** FOR OTA **************************************************/
-#define SENSORNAME "radar1"
-#define OTApassword "password" // change this to whatever password you want to use when you upload OTA
 int OTAport = 8266;
 
 
@@ -62,8 +35,8 @@ PubSubClient client(espClient);
 
 const int sensorPin = 2; //radar sensor
 const int ledPin = 15;
-const char* ssid = "PidgeonsNest";
-const char* password = "3b5794e3e9";
+const char* ssid = SSID;
+const char* password = PASSWORD;
 
 int calibrationTime = 0;
 const int BUFFER_SIZE = 300;
@@ -104,9 +77,9 @@ void setup() {
 
   ArduinoOTA.setPort(OTAport);
 
-  ArduinoOTA.setHostname(SENSORNAME);
+  ArduinoOTA.setHostname(OTA_HOSTNAME);
 
-  ArduinoOTA.setPassword((const char *)OTApassword);
+  ArduinoOTA.setPassword((const char *)OTA_PASSWORD);
 
   Serial.print("calibrating sensor ");
   for (int i = 0; i < calibrationTime; i++) {
@@ -114,11 +87,11 @@ void setup() {
     delay(1000);
   }
 
-  Serial.println("Starting Node named " + String(SENSORNAME));
+  Serial.println("Starting Node named " + String(OTA_HOSTNAME));
 
   setup_wifi();
 
-  client.setServer(mqtt_server, mqtt_port);
+  client.setServer(MQTT_SERVER, MQTT_PORT);
   client.setCallback(callback);
 
 
@@ -196,7 +169,7 @@ void sendState() {
   root.printTo(buffer, sizeof(buffer));
 
   Serial.println(buffer);
-  client.publish(light_state_topic, buffer, true);
+  client.publish(STATE_TOPIC, buffer, true);
 }
 
 /********************************** START RECONNECT*****************************************/
@@ -205,9 +178,9 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(SENSORNAME, mqtt_user, mqtt_password)) {
+    if (client.connect(OTA_HOSTNAME, MQTT_USERNAME, MQTT_PASSWORD)) {
       Serial.println("connected");
-      client.subscribe(light_set_topic);
+      client.subscribe(SET_TOPIC);
       sendState();
     } else {
       Serial.print("failed, rc=");
